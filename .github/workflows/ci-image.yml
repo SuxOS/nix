@@ -1,0 +1,64 @@
+name: ci-image
+
+# Builds the flake's packages.ci-image (lightweight nix-built OCI runner image, see #3) and
+# pushes it to GHCR on main. Gated behind flake-check: triggered by that workflow's completion
+# rather than re-running on push directly, so a red flake-check never publishes a broken image.
+# Also runs a pilot smoke-test: load the built image and exercise its pinned toolchain, to check
+# runtime parity before any real workflow adopts `container: ghcr.io/suxos/ci-base:latest`.
+
+on:
+  workflow_run:
+    workflows: ["flake-check"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3 # v14
+      - uses: DeterminateSystems/magic-nix-cache-action@87b14cf437d03d37989d87f0fa5ce4f5dc1a330b # v8
+      - name: Build packages.ci-image
+        run: nix build .#ci-image --accept-flake-config --print-build-logs
+      - name: Load image into the local docker daemon
+        run: docker load < result
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Tag + push
+        id: push
+        run: |
+          sha_tag="ghcr.io/${{ github.repository_owner }}/ci-base:${GITHUB_SHA::7}"
+          latest_tag="ghcr.io/${{ github.repository_owner }}/ci-base:latest"
+          docker tag ci-base:latest "$sha_tag"
+          docker tag ci-base:latest "$latest_tag"
+          docker push "$sha_tag"
+          docker push "$latest_tag"
+          echo "image=$latest_tag" >> "$GITHUB_OUTPUT"
+
+  pilot-smoke-test:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Runtime-parity smoke test
+        run: |
+          image="${{ needs.build-and-push.outputs.image }}"
+          docker run --rm "$image" bash -lc '
+            set -eux
+            git --version
+            gh --version
+            jq --version
+            rg --version
+            node --version
+            python3 --version
+          '
