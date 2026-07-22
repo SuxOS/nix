@@ -49,6 +49,31 @@
       {
         packages.ucode-box = pkgs.ucode-box;
 
+        # Base OCI image for org workflow runners (builders/fixers/evals — stateless, bursty,
+        # per-run: the image-shaped case, see issue #3). Layered so tool bumps only invalidate
+        # their own layer. Every tool version is pinned by nixpkgs' own flake.lock, same as the
+        # rest of this repo — no ad-hoc version floats. nodejs_22 (current LTS): nodejs_20 is EOL
+        # and nixpkgs marks it insecure, which fails eval outright.
+        packages.ci-image = pkgs.dockerTools.buildLayeredImage {
+          name = "ci-base";
+          tag = "latest";
+          contents = [
+            pkgs.bashInteractive
+            pkgs.coreutils
+            pkgs.cacert
+            pkgs.git
+            pkgs.gh
+            pkgs.jq
+            pkgs.ripgrep
+            pkgs.nodejs_22
+            pkgs.python3
+          ];
+          config = {
+            Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
+            Cmd = [ "${pkgs.bashInteractive}/bin/bash" ];
+          };
+        };
+
         # Level-1 shared base devShell. Per-repo devShells compose on top:
         #   devShells.default = pkgs.mkShell { inputsFrom = [ suxos-nix.devShells.${system}.default ]; packages = [ ... ]; };
         devShells.default = pkgs.mkShell {
