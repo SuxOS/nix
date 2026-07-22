@@ -9,8 +9,14 @@ on:
   push:
     branches: [main]
     paths: ["flake.nix", "flake.lock", ".github/workflows/flake-check.yml"]
+  # No paths filter on pull_request: flake-check is this repo's required merge gate
+  # (automerge.yml/pr-drain.yml required-gates + the main-branch ruleset), and a
+  # path-filtered REQUIRED check never reports on a non-matching PR — which wedges that
+  # PR BLOCKED forever waiting on a status that will never arrive (the org's known
+  # path-filtered-required-check jam). Nix copies the whole tree into the store anyway,
+  # so any file can affect evaluation; push:main keeps its filter since nothing gates on it.
   pull_request:
-    paths: ["flake.nix", "flake.lock", ".github/workflows/flake-check.yml"]
+  merge_group:
   workflow_dispatch: {}
 
 permissions:

@@ -1,0 +1,22 @@
+name: Fixer
+
+# Proposer stage: scans this repo, files bugs/features as issues with confidence labels.
+# Never opens a PR, never queues for build (issue-build.yml decides that). Runs on the
+# Claude Pro/Max subscription (CLAUDE_CODE_OAUTH_TOKEN), not a metered API key.
+# Cold-tier repo: a SINGLE weekly fixer (Fixer Cadence v2), same shape as suxos-net —
+# no fixer-bugs/fixer-30m siblings here, deliberately.
+# Reusable workflow: SuxOS/.github/.github/workflows/fixer.yml
+
+on:
+  schedule:
+    - cron: "39 10 * * 1" # Fixer Cadence v2: cold-tier weekly sweep
+  workflow_dispatch:
+
+jobs:
+  fixer:
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    uses: SuxOS/.github/.github/workflows/fixer.yml@main
+    secrets: inherit
