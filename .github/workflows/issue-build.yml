@@ -1,0 +1,31 @@
+name: Issue build
+
+# Collate + build stage: clusters queued-for-build issues, fans out one build session + PR
+# per cluster. confidence:high clusters get `automerge`, the rest `needs-review`. Runs on
+# the Claude Pro/Max subscription (CLAUDE_CODE_OAUTH_TOKEN). PRs flow into the existing
+# automerge pipeline. This repo's gates are nix-based, not npm — see flake-check.yml.
+# Reusable workflow: SuxOS/.github/.github/workflows/issue-build.yml
+
+on:
+  schedule:
+    - cron: "25 * * * *" # hourly, offset from sibling repos to spread shared-subscription load
+  workflow_dispatch:
+  issues:
+    types: [labeled]
+
+jobs:
+  issue-build:
+    if: github.event_name != 'issues' || contains(fromJSON('["bug","enhancement","documentation"]'), github.event.label.name)
+    # Grant exactly what issue-build.yml needs (default token is read-only → reusable would startup-fail).
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
+    uses: SuxOS/.github/.github/workflows/issue-build.yml@main
+    with:
+      model-hint: sonnet  # sonnet only, no Opus escalation (operator directive)
+      gates-summary: |
+        nix flake check · nix build .#ucode-box
+    secrets: inherit
