@@ -38,8 +38,9 @@ jobs:
       - name: Tag + push
         id: push
         run: |
-          sha_tag="ghcr.io/${{ github.repository_owner }}/ci-base:${GITHUB_SHA::7}"
-          latest_tag="ghcr.io/${{ github.repository_owner }}/ci-base:latest"
+          owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          sha_tag="ghcr.io/${owner_lc}/ci-base:${GITHUB_SHA::7}"
+          latest_tag="ghcr.io/${owner_lc}/ci-base:latest"
           docker tag ci-base:latest "$sha_tag"
           docker tag ci-base:latest "$latest_tag"
           docker push "$sha_tag"
