@@ -2,10 +2,13 @@ name: Auto-merge
 
 # Enables GitHub NATIVE auto-merge on eligible, trusted-author PRs; never force-merges.
 # Uses pull_request_target (base-repo context, write token) but never checks out PR code —
-# only reads the event payload and calls the API. Org rulesets (SuxOS/.github#669) require
-# only `security-review` fleet-wide — no per-repo CI job (e.g. `flake-check`) is a required
-# status check anymore. Don't reintroduce one here without first adding it to the org
-# ruleset, or assert-branch-protection refuses to arm (see .github#700).
+# only reads the event payload and calls the API. required-gates lists only the org-wide
+# ruleset gate (`security-review`). This repo's own required check (`flake-check`) is
+# STILL independently enforced by a live per-repo ruleset — #669 intended to fold it into
+# the org ruleset and retire the per-repo one, but only this required-gates trim landed
+# before the issue closed; the rest is tracked in #717. Don't reintroduce flake-check here
+# without first adding it to the org ruleset, or assert-branch-protection refuses to arm
+# (it's a subset check against LIVE rulesets — see .github#700).
 # Reusable workflow: SuxOS/.github/.github/workflows/automerge.yml
 
 on:
