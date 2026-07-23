@@ -2,10 +2,10 @@ name: Auto-merge
 
 # Enables GitHub NATIVE auto-merge on eligible, trusted-author PRs; never force-merges.
 # Uses pull_request_target (base-repo context, write token) but never checks out PR code —
-# only reads the event payload and calls the API. The org default required-gates list names
-# checks that don't exist in this repo, so override with the real check names: this repo's
-# CI job is `flake-check` (see flake-check.yml). Must stay in lock-step with pr-drain.yml's
-# list and the main-branch ruleset.
+# only reads the event payload and calls the API. Org rulesets (SuxOS/.github#669) require
+# only `security-review` fleet-wide — no per-repo CI job (e.g. `flake-check`) is a required
+# status check anymore. Don't reintroduce one here without first adding it to the org
+# ruleset, or assert-branch-protection refuses to arm (see .github#700).
 # Reusable workflow: SuxOS/.github/.github/workflows/automerge.yml
 
 on:
@@ -20,6 +20,5 @@ jobs:
     uses: SuxOS/.github/.github/workflows/automerge.yml@main
     with:
       required-gates: |
-        flake-check
         security-review
     secrets: inherit
