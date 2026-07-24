@@ -23,5 +23,5 @@ jobs:
     uses: SuxOS/.github/.github/workflows/automerge.yml@main
     with:
       required-gates: |
-        security-review
+        flake-check
     secrets: inherit
